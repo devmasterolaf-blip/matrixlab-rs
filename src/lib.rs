@@ -4,6 +4,7 @@
 
 pub mod analysis;
 pub mod cholesky;
+pub mod cli;
 pub mod display;
 pub mod eigen;
 pub mod error;
