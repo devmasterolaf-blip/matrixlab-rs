@@ -4,6 +4,7 @@
 
 pub mod error;
 pub mod matrix;
+pub mod sum;
 
 pub use error::{LinalgError, Result};
 pub use matrix::Matrix;
