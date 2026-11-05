@@ -1,0 +1,19 @@
+[package]
+name = "matrixlab"
+version = "0.1.0"
+edition = "2021"
+description = "Dense and sparse linear algebra in plain Rust, with a small command-line tool"
+license = "MIT"
+readme = "README.md"
+keywords = ["linear-algebra", "matrix", "sparse", "numerics"]
+categories = ["mathematics", "science", "command-line-utilities"]
+
+[lib]
+name = "matrixlab"
+path = "src/lib.rs"
+
+[[bin]]
+name = "matrixlab"
+path = "src/main.rs"
+
+[dependencies]
