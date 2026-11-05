@@ -8,6 +8,7 @@ pub mod lu;
 pub mod matrix;
 pub mod norms;
 pub mod ops;
+pub mod qr;
 pub mod sum;
 pub mod vector;
 pub mod view;
