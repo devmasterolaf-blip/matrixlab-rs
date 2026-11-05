@@ -190,3 +190,24 @@ fn symmetry_uses_an_absolute_tolerance() {
     let with_nan = Matrix::from_rows(&[[1.0, f64::NAN], [0.0, 1.0]]).unwrap();
     assert!(!with_nan.is_symmetric(1.0));
 }
+
+#[test]
+fn from_vec_rejects_a_shape_whose_element_count_overflows() {
+    // Half the address space times two wraps around to zero, which must not pass for an
+    // empty buffer.
+    let half = usize::MAX / 2 + 1;
+    let err = Matrix::from_vec(half, 2, Vec::new()).unwrap_err();
+    assert_eq!(
+        err,
+        LinalgError::InvalidShape {
+            rows: half,
+            cols: 2,
+            len: 0
+        }
+    );
+    assert_eq!(
+        err.to_string(),
+        format!("a {}x2 matrix has more elements than can be addressed", half)
+    );
+    assert!(Matrix::from_vec(usize::MAX, usize::MAX, vec![1.0]).is_err());
+}

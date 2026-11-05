@@ -65,14 +65,18 @@ pub enum LinalgError {
 impl fmt::Display for LinalgError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LinalgError::InvalidShape { rows, cols, len } => write!(
-                f,
-                "a {}x{} matrix needs {} elements, but {} were given",
-                rows,
-                cols,
-                rows * cols,
-                len
-            ),
+            LinalgError::InvalidShape { rows, cols, len } => match rows.checked_mul(*cols) {
+                Some(needed) => write!(
+                    f,
+                    "a {}x{} matrix needs {} elements, but {} were given",
+                    rows, cols, needed, len
+                ),
+                None => write!(
+                    f,
+                    "a {}x{} matrix has more elements than can be addressed",
+                    rows, cols
+                ),
+            },
             LinalgError::RaggedRows {
                 row,
                 expected,

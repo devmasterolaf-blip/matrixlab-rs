@@ -52,9 +52,10 @@ impl Matrix {
 
     /// Builds a matrix from row-major data.
     ///
-    /// Fails with [`LinalgError::InvalidShape`] when `data.len() != rows * cols`.
+    /// Fails with [`LinalgError::InvalidShape`] when `data.len() != rows * cols`, which
+    /// includes shapes whose element count does not fit in a `usize`.
     pub fn from_vec(rows: usize, cols: usize, data: Vec<f64>) -> Result<Matrix> {
-        if data.len() != rows * cols {
+        if rows.checked_mul(cols) != Some(data.len()) {
             return Err(LinalgError::InvalidShape {
                 rows,
                 cols,
