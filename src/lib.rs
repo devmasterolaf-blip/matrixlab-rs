@@ -6,6 +6,7 @@ pub mod analysis;
 pub mod cholesky;
 pub mod eigen;
 pub mod error;
+pub mod iterative;
 pub mod lu;
 pub mod matrix;
 pub mod norms;

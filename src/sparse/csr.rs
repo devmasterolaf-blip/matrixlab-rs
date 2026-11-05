@@ -245,13 +245,18 @@ impl CsrMatrix {
     /// True when the matrix is square and every element differs from its mirror element by
     /// at most `tol`.
     pub fn is_symmetric(&self, tol: f64) -> bool {
-        if self.rows != self.cols {
-            return false;
-        }
-        self.iter().all(|(row, col, value)| {
-            let mirror = self.get(col, row).unwrap_or(0.0);
-            (value - mirror).abs() <= tol
-        })
+        self.rows == self.cols && self.first_asymmetry(tol).is_none()
+    }
+
+    /// The first stored position whose mirror element differs from it by more than `tol`.
+    /// Only meaningful for a square matrix.
+    pub(crate) fn first_asymmetry(&self, tol: f64) -> Option<(usize, usize)> {
+        self.iter()
+            .find(|&(row, col, value)| {
+                let mirror = self.get(col, row).unwrap_or(f64::NAN);
+                !((value - mirror).abs() <= tol)
+            })
+            .map(|(row, col, _)| (row, col))
     }
 }
 
