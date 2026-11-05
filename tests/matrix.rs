@@ -225,3 +225,18 @@ fn trace_survives_cancellation_between_large_diagonal_elements() {
     let m = Matrix::from_diagonal(&[1e16, 1.0, -1e16]);
     assert_eq!(m.trace(), Ok(1.0));
 }
+
+#[test]
+fn swap_columns_exchanges_every_row() {
+    let mut m = Matrix::from_rows(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]).unwrap();
+    m.swap_columns(0, 2);
+    assert_eq!(m.as_slice(), &[3.0, 2.0, 1.0, 6.0, 5.0, 4.0]);
+    m.swap_columns(1, 1);
+    assert_eq!(m.as_slice(), &[3.0, 2.0, 1.0, 6.0, 5.0, 4.0]);
+}
+
+#[test]
+#[should_panic(expected = "cannot swap columns 0 and 3 of a matrix with 3 columns")]
+fn swap_columns_panics_out_of_bounds() {
+    Matrix::zeros(2, 3).swap_columns(0, 3);
+}

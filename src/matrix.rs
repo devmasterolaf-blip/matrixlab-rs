@@ -252,6 +252,23 @@ impl Matrix {
         head[lo * self.cols..(lo + 1) * self.cols].swap_with_slice(&mut tail[..self.cols]);
     }
 
+    /// Exchanges columns `a` and `b` in place. Panics when either is out of bounds.
+    pub fn swap_columns(&mut self, a: usize, b: usize) {
+        assert!(
+            a < self.cols && b < self.cols,
+            "cannot swap columns {} and {} of a matrix with {} columns",
+            a,
+            b,
+            self.cols
+        );
+        if a == b {
+            return;
+        }
+        for row in self.data.chunks_exact_mut(self.cols) {
+            row.swap(a, b);
+        }
+    }
+
     /// True when the matrix is square and `|a[i][j] - a[j][i]| <= tol` for every pair.
     pub fn is_symmetric(&self, tol: f64) -> bool {
         self.first_asymmetry(tol).is_none() && self.is_square()

@@ -72,17 +72,13 @@ fn count_pivots(a: &Matrix, tolerance: f64) -> usize {
                 }
             }
         }
-        if !(pivot_abs > threshold) || pivot_abs == 0.0 {
+        // The threshold is never negative, so this also stops at an all-zero remainder, and
+        // the negated comparison stops at a NaN.
+        if !(pivot_abs > threshold) {
             break;
         }
         work.swap_rows(k, pivot.0);
-        if pivot.1 != k {
-            for i in 0..m {
-                let tmp = work[(i, k)];
-                work[(i, k)] = work[(i, pivot.1)];
-                work[(i, pivot.1)] = tmp;
-            }
-        }
+        work.swap_columns(k, pivot.1);
         let diagonal = work[(k, k)];
         for i in (k + 1)..m {
             let factor = work[(i, k)] / diagonal;
