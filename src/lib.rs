@@ -2,6 +2,7 @@
 //!
 //! The crate uses the standard library only. Modules are added as the library grows.
 
+pub mod cholesky;
 pub mod error;
 pub mod lu;
 pub mod matrix;
