@@ -169,6 +169,112 @@ impl Matrix {
             })
         }
     }
+
+    /// Row `i` as a slice. Panics when `i` is out of bounds.
+    pub fn row(&self, i: usize) -> &[f64] {
+        assert!(i < self.rows, "row {} is out of bounds for {} rows", i, self.rows);
+        &self.data[i * self.cols..(i + 1) * self.cols]
+    }
+
+    /// Row `i` as a mutable slice. Panics when `i` is out of bounds.
+    pub fn row_mut(&mut self, i: usize) -> &mut [f64] {
+        assert!(i < self.rows, "row {} is out of bounds for {} rows", i, self.rows);
+        &mut self.data[i * self.cols..(i + 1) * self.cols]
+    }
+
+    /// An iterator over the rows, each one a slice.
+    pub fn iter_rows(&self) -> impl Iterator<Item = &[f64]> + '_ {
+        (0..self.rows).map(move |i| &self.data[i * self.cols..(i + 1) * self.cols])
+    }
+
+    /// A copy of column `j`. Panics when `j` is out of bounds.
+    pub fn column(&self, j: usize) -> Vec<f64> {
+        assert!(j < self.cols, "column {} is out of bounds for {} columns", j, self.cols);
+        (0..self.rows).map(|i| self.data[i * self.cols + j]).collect()
+    }
+
+    /// A copy of the main diagonal; for a rectangular matrix it has `min(rows, cols)` elements.
+    pub fn diagonal(&self) -> Vec<f64> {
+        (0..self.rows.min(self.cols))
+            .map(|i| self.data[i * self.cols + i])
+            .collect()
+    }
+
+    /// The sum of the diagonal elements of a square matrix.
+    pub fn trace(&self) -> Result<f64> {
+        self.require_square()?;
+        Ok(self.diagonal().iter().sum())
+    }
+
+    /// The transpose, as a new matrix.
+    pub fn transpose(&self) -> Matrix {
+        let mut t = Matrix::zeros(self.cols, self.rows);
+        for i in 0..self.rows {
+            for j in 0..self.cols {
+                t.data[j * self.rows + i] = self.data[i * self.cols + j];
+            }
+        }
+        t
+    }
+
+    /// A new matrix with `f` applied to every element.
+    pub fn map<F: FnMut(f64) -> f64>(&self, mut f: F) -> Matrix {
+        Matrix {
+            rows: self.rows,
+            cols: self.cols,
+            data: self.data.iter().map(|&x| f(x)).collect(),
+        }
+    }
+
+    /// Exchanges rows `a` and `b` in place. Panics when either is out of bounds.
+    pub fn swap_rows(&mut self, a: usize, b: usize) {
+        assert!(
+            a < self.rows && b < self.rows,
+            "cannot swap rows {} and {} of a matrix with {} rows",
+            a,
+            b,
+            self.rows
+        );
+        if a == b {
+            return;
+        }
+        let (lo, hi) = if a < b { (a, b) } else { (b, a) };
+        let (head, tail) = self.data.split_at_mut(hi * self.cols);
+        head[lo * self.cols..(lo + 1) * self.cols].swap_with_slice(&mut tail[..self.cols]);
+    }
+
+    /// True when the matrix is square and `|a[i][j] - a[j][i]| <= tol` for every pair.
+    pub fn is_symmetric(&self, tol: f64) -> bool {
+        self.first_asymmetry(tol).is_none() && self.is_square()
+    }
+
+    /// The first `(row, col)` above the diagonal whose mirror element differs by more than
+    /// `tol`. Only the leading square part of a rectangular matrix is inspected.
+    pub(crate) fn first_asymmetry(&self, tol: f64) -> Option<(usize, usize)> {
+        let n = self.rows.min(self.cols);
+        for i in 0..n {
+            for j in (i + 1)..n {
+                let diff = (self.data[i * self.cols + j] - self.data[j * self.cols + i]).abs();
+                // A NaN difference is an asymmetry as well, hence the negated comparison.
+                if !(diff <= tol) {
+                    return Some((i, j));
+                }
+            }
+        }
+        None
+    }
+
+    /// Returns [`LinalgError::NotSquare`] unless the matrix is square.
+    pub(crate) fn require_square(&self) -> Result<()> {
+        if self.is_square() {
+            Ok(())
+        } else {
+            Err(LinalgError::NotSquare {
+                rows: self.rows,
+                cols: self.cols,
+            })
+        }
+    }
 }
 
 impl Index<(usize, usize)> for Matrix {

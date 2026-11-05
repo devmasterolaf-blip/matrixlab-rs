@@ -117,3 +117,76 @@ fn indexing_past_the_last_column_panics() {
     // has to be checked on its own.
     let _ = m[(0, 2)];
 }
+
+fn sample() -> Matrix {
+    Matrix::from_rows(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]).unwrap()
+}
+
+#[test]
+fn rows_and_columns_can_be_read() {
+    let m = sample();
+    assert_eq!(m.row(1), &[4.0, 5.0, 6.0]);
+    assert_eq!(m.column(2), vec![3.0, 6.0]);
+    let rows: Vec<&[f64]> = m.iter_rows().collect();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0], &[1.0, 2.0, 3.0]);
+}
+
+#[test]
+fn row_mut_edits_in_place() {
+    let mut m = sample();
+    m.row_mut(0)[1] = 20.0;
+    assert_eq!(m[(0, 1)], 20.0);
+}
+
+#[test]
+fn transpose_swaps_the_shape_and_is_an_involution() {
+    let m = sample();
+    let t = m.transpose();
+    assert_eq!(t.shape(), (3, 2));
+    assert_eq!(t.as_slice(), &[1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+    assert_eq!(t.transpose(), m);
+}
+
+#[test]
+fn diagonal_of_a_rectangular_matrix_stops_at_the_short_side() {
+    assert_eq!(sample().diagonal(), vec![1.0, 5.0]);
+    assert_eq!(sample().transpose().diagonal(), vec![1.0, 5.0]);
+}
+
+#[test]
+fn trace_needs_a_square_matrix() {
+    let sq = Matrix::from_rows(&[[1.0, 2.0], [3.0, 4.0]]).unwrap();
+    assert_eq!(sq.trace(), Ok(5.0));
+    assert_eq!(
+        sample().trace(),
+        Err(LinalgError::NotSquare { rows: 2, cols: 3 })
+    );
+}
+
+#[test]
+fn map_applies_the_closure_to_every_element() {
+    let doubled = sample().map(|x| 2.0 * x);
+    assert_eq!(doubled.as_slice(), &[2.0, 4.0, 6.0, 8.0, 10.0, 12.0]);
+}
+
+#[test]
+fn swap_rows_works_in_both_orders_and_for_equal_indices() {
+    let mut m = Matrix::from_rows(&[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).unwrap();
+    m.swap_rows(0, 2);
+    assert_eq!(m.as_slice(), &[5.0, 6.0, 3.0, 4.0, 1.0, 2.0]);
+    m.swap_rows(2, 1);
+    assert_eq!(m.as_slice(), &[5.0, 6.0, 1.0, 2.0, 3.0, 4.0]);
+    m.swap_rows(1, 1);
+    assert_eq!(m.as_slice(), &[5.0, 6.0, 1.0, 2.0, 3.0, 4.0]);
+}
+
+#[test]
+fn symmetry_uses_an_absolute_tolerance() {
+    let s = Matrix::from_rows(&[[2.0, 1.0], [1.0 + 1e-12, 3.0]]).unwrap();
+    assert!(s.is_symmetric(1e-10));
+    assert!(!s.is_symmetric(1e-14));
+    assert!(!sample().is_symmetric(1e-10));
+    let with_nan = Matrix::from_rows(&[[1.0, f64::NAN], [0.0, 1.0]]).unwrap();
+    assert!(!with_nan.is_symmetric(1.0));
+}
