@@ -2,8 +2,9 @@
 
 A small dense and sparse linear-algebra library in Rust, with a command-line tool.
 It uses the standard library only and is written to be read: every routine is a
-direct, commented implementation of a textbook algorithm, and every failure is a
-typed error instead of a panic.
+direct, commented implementation of a textbook algorithm, and failures are
+reported as typed errors rather than panics (the known exceptions are listed under
+[Limitations](#limitations)).
 
 This is version 0.1.0, a young project. It is not published on crates.io and it is
 not tuned for speed; see [Limitations](#limitations) before relying on it.
@@ -322,8 +323,15 @@ matrices, small integer cases), and every comparison states its tolerance.
   `Lu::with_tolerance` lets you choose the tolerance.
 - The sparse side has no direct solver and no preconditioners.
 - The command-line tool converts a sparse matrix to a dense one for every command
-  except `solve` with an iterative method.
-- Matrix Market support covers the coordinate format only.
+  except `solve` with an iterative method. That conversion does not check the
+  size first: a file that declares enormous dimensions makes those commands abort
+  with an allocation panic instead of an error message.
+- Matrix Market support covers the coordinate format only, and the format is
+  detected from the very first characters of a file: a blank line or a byte-order
+  mark before the `%%MatrixMarket` banner is not handled.
+- Non-finite values (`nan`, `inf`) are accepted in input files, and the numerical
+  routines do not diagnose them; they surface as NaN results or as unrelated
+  errors.
 
 ## License
 
