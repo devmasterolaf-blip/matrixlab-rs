@@ -23,6 +23,25 @@ pub enum ParseErrorKind {
     RaggedRow { expected: usize, found: usize },
     /// A vector was expected, but the data has several rows and several columns.
     NotAVector { rows: usize, cols: usize },
+    /// A Matrix Market file does not start with a `%%MatrixMarket` banner.
+    MissingBanner,
+    /// The banner does not have the five words `%%MatrixMarket object format field symmetry`.
+    MalformedBanner { found: usize },
+    /// A banner word names something this crate does not read. `what` is the role of the
+    /// word (`"object"`, `"format"`, `"field"` or `"symmetry"`).
+    Unsupported { what: &'static str, token: String },
+    /// A line has the wrong number of fields.
+    FieldCount { expected: usize, found: usize },
+    /// A size or an index is not a non-negative whole number.
+    InvalidInteger { column: usize, token: String },
+    /// A 1-based index is zero or larger than the dimension it addresses.
+    IndexOutOfRange { index: usize, limit: usize },
+    /// The number of entry lines differs from the count announced in the size line.
+    EntryCount { expected: usize, found: usize },
+    /// A symmetric or skew-symmetric file describes a matrix that is not square.
+    SymmetryNeedsSquare { rows: usize, cols: usize },
+    /// A skew-symmetric file has an entry on the diagonal.
+    SkewDiagonalEntry { index: usize },
 }
 
 impl ParseError {
@@ -51,6 +70,41 @@ impl fmt::Display for ParseErrorKind {
                 f,
                 "expected a single row or a single column, found a {}x{} matrix",
                 rows, cols
+            ),
+            ParseErrorKind::MissingBanner => {
+                write!(f, "the file does not start with a %%MatrixMarket banner")
+            }
+            ParseErrorKind::MalformedBanner { found } => {
+                write!(f, "the banner needs 5 words, found {}", found)
+            }
+            ParseErrorKind::Unsupported { what, token } => {
+                write!(f, "unsupported {} '{}'", what, token)
+            }
+            ParseErrorKind::FieldCount { expected, found } => {
+                write!(f, "expected {} fields, found {}", expected, found)
+            }
+            ParseErrorKind::InvalidInteger { column, token } => write!(
+                f,
+                "field {} is not a non-negative whole number: '{}'",
+                column, token
+            ),
+            ParseErrorKind::IndexOutOfRange { index, limit } => {
+                write!(f, "index {} is outside 1..={}", index, limit)
+            }
+            ParseErrorKind::EntryCount { expected, found } => write!(
+                f,
+                "the size line announces {} entries, but {} were found",
+                expected, found
+            ),
+            ParseErrorKind::SymmetryNeedsSquare { rows, cols } => write!(
+                f,
+                "a symmetric matrix must be square, but the size line says {}x{}",
+                rows, cols
+            ),
+            ParseErrorKind::SkewDiagonalEntry { index } => write!(
+                f,
+                "a skew-symmetric matrix cannot have an entry on its diagonal ({}, {})",
+                index, index
             ),
         }
     }
