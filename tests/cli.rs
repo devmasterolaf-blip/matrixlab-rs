@@ -361,3 +361,42 @@ fn the_binary_reports_results_and_exit_codes() {
     let usage = Command::new(binary).output().unwrap();
     assert_eq!(usage.status.code(), Some(2));
 }
+
+/// The files in `examples/data` and the outputs shown for them in the README.
+#[test]
+fn the_example_data_gives_the_documented_results() {
+    let data = |name: &str| format!("{}/examples/data/{}", env!("CARGO_MANIFEST_DIR"), name);
+
+    let solved = matrixlab(&["solve", &data("system.txt"), &data("rhs.txt")]);
+    assert_eq!(solved.stdout, "0.222222\n0.111111\n1.444444\n");
+
+    let eig = matrixlab(&["eig", &data("laplacian.mtx")]);
+    assert_eq!(eig.stdout, "0.267949\n1.000000\n2.000000\n3.000000\n3.732051\n");
+
+    let cg = matrixlab(&[
+        "solve",
+        &data("laplacian.mtx"),
+        &data("ones.txt"),
+        "--method",
+        "cg",
+        "--precision",
+        "3",
+    ]);
+    assert_eq!(cg.code, EXIT_OK);
+    assert_eq!(cg.stdout, "2.500\n4.000\n4.500\n4.000\n2.500\n");
+
+    let fit = matrixlab(&["lstsq", &data("line.csv"), &data("observations.txt")]);
+    assert_eq!(fit.stdout, "1.090000\n1.940000\n");
+    assert_eq!(fit.stderr, "residual norm: 0.286356\n");
+
+    let info = matrixlab(&["info", &data("laplacian.mtx")]);
+    assert!(info.stdout.contains("storage: sparse (13 entries)\n"));
+    assert!(info.stdout.contains("determinant: 6.000000\n"));
+
+    let not_square = matrixlab(&["inv", &data("line.csv")]);
+    assert_eq!(not_square.code, EXIT_FAILURE);
+    assert_eq!(
+        not_square.stderr,
+        "matrixlab: matrix is 4x2, but a square matrix is required\n"
+    );
+}

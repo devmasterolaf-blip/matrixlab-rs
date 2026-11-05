@@ -60,3 +60,8 @@ pub use view::MatrixView;
 
 /// The version of the crate, as written in `Cargo.toml`.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Compiles and runs the Rust examples of the README as documentation tests.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeExamples;
