@@ -64,6 +64,12 @@ impl Matrix {
         Ok(Matrix { rows, cols, data })
     }
 
+    /// Wraps a buffer whose length the caller has already made equal to `rows * cols`.
+    pub(crate) fn from_parts(rows: usize, cols: usize, data: Vec<f64>) -> Matrix {
+        debug_assert_eq!(data.len(), rows * cols);
+        Matrix { rows, cols, data }
+    }
+
     /// Builds a matrix from a list of rows.
     ///
     /// Fails with [`LinalgError::RaggedRows`] when a row is shorter or longer than the

@@ -4,6 +4,7 @@
 
 pub mod error;
 pub mod matrix;
+pub mod ops;
 pub mod sum;
 pub mod vector;
 
