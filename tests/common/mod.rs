@@ -57,3 +57,13 @@ pub fn assert_vector_close(actual: &Vector, expected: &[f64], tol: f64) {
 pub fn hilbert(n: usize) -> Matrix {
     Matrix::from_fn(n, n, |i, j| 1.0 / (i + j + 1) as f64)
 }
+
+/// Writes `content` to a file under cargo's per-target scratch directory and returns its
+/// path. `name` must be unique among the tests of one test binary.
+pub fn scratch_file(name: &str, content: &str) -> std::path::PathBuf {
+    let dir = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("matrixlab-tests");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join(name);
+    std::fs::write(&path, content).unwrap();
+    path
+}
