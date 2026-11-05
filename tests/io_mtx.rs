@@ -33,7 +33,13 @@ fn reads_a_general_real_matrix() {
 
 #[test]
 fn a_symmetric_file_fills_in_the_other_triangle() {
-    let text = "%%MatrixMarket matrix coordinate real symmetric\n3 3 4\n1 1 4\n2 1 1\n3 2 -2\n3 3 5\n";
+    let text = "%%MatrixMarket matrix coordinate real symmetric
+3 3 4
+1 1 4
+2 1 1
+3 2 -2
+3 3 5
+";
     let coo = parse_coordinate(text).unwrap();
     assert_eq!(coo.nnz(), 6);
     let expected =
