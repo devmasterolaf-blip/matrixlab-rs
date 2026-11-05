@@ -7,6 +7,7 @@ pub mod cholesky;
 pub mod display;
 pub mod eigen;
 pub mod error;
+pub mod io;
 pub mod iterative;
 pub mod lu;
 pub mod matrix;
