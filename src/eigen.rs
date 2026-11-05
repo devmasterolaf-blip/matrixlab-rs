@@ -3,6 +3,7 @@
 use crate::cholesky::SYMMETRY_TOLERANCE;
 use crate::error::{LinalgError, Result};
 use crate::matrix::Matrix;
+use crate::vector::Vector;
 
 /// Limits for the Jacobi eigenvalue iteration.
 #[derive(Debug, Clone, PartialEq)]
@@ -152,4 +153,108 @@ fn rotate(a: &mut Matrix, vectors: &mut Matrix, p: usize, q: usize) {
         vectors[(k, p)] = c * vkp - s * vkq;
         vectors[(k, q)] = s * vkp + c * vkq;
     }
+}
+
+/// Limits and the starting point for [`power_iteration`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct PowerOptions {
+    /// The largest number of multiplications by the matrix.
+    pub max_iterations: usize,
+    /// The iteration stops when `||A * x - lambda * x|| <= tolerance * ||A * x||`.
+    pub tolerance: f64,
+    /// The starting vector. `None` selects a fixed pseudo-random vector, which is the same
+    /// on every run.
+    pub start: Option<Vector>,
+}
+
+impl Default for PowerOptions {
+    fn default() -> PowerOptions {
+        PowerOptions {
+            max_iterations: 1000,
+            tolerance: 1e-10,
+            start: None,
+        }
+    }
+}
+
+/// One eigenvalue with its eigenvector.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EigenPair {
+    /// The eigenvalue estimate (a Rayleigh quotient).
+    pub value: f64,
+    /// The eigenvector estimate, of unit Euclidean length.
+    pub vector: Vector,
+    /// The number of multiplications by the matrix that were used.
+    pub iterations: usize,
+}
+
+/// Finds the eigenvalue of largest magnitude of a square matrix by power iteration.
+///
+/// The matrix does not have to be symmetric, but the dominant eigenvalue must be real and
+/// strictly larger in magnitude than the others; the closer the second one is, the slower
+/// the convergence. When two eigenvalues share the largest magnitude (for example `2` and
+/// `-2`) the iteration does not settle and the result is [`LinalgError::NoConvergence`].
+pub fn power_iteration(a: &Matrix, options: &PowerOptions) -> Result<EigenPair> {
+    a.require_square()?;
+    if a.is_empty() {
+        return Err(LinalgError::Empty {
+            op: "power iteration",
+        });
+    }
+    if !(options.tolerance >= 0.0) {
+        return Err(LinalgError::InvalidArgument {
+            what: "the power iteration tolerance must be zero or positive",
+        });
+    }
+    let n = a.rows();
+    let start = match &options.start {
+        Some(start) if start.len() != n => {
+            return Err(LinalgError::DimensionMismatch {
+                op: "power iteration start vector",
+                left: a.shape(),
+                right: (start.len(), 1),
+            });
+        }
+        Some(start) => start.clone(),
+        None => default_start(n),
+    };
+    let mut x = start.normalized()?;
+    let mut residual = f64::INFINITY;
+    for iteration in 1..=options.max_iterations {
+        let y = a.try_mul_vec(&x)?;
+        let value = x.dot(&y)?;
+        let y_norm = y.norm2();
+        let mut difference = y.clone();
+        difference.axpy(-value, &x)?;
+        residual = difference.norm2();
+        if residual <= options.tolerance * y_norm {
+            return Ok(EigenPair {
+                value,
+                vector: x,
+                iterations: iteration,
+            });
+        }
+        x = y.scale(1.0 / y_norm);
+    }
+    Err(LinalgError::NoConvergence {
+        method: "power iteration",
+        iterations: options.max_iterations,
+        residual,
+    })
+}
+
+/// A fixed vector with components in `(0, 1]` from a small linear congruential generator.
+///
+/// A structured start such as all ones is orthogonal to the dominant eigenvector of many
+/// structured matrices; an irregular one almost never is.
+fn default_start(n: usize) -> Vector {
+    let mut state: u64 = 0x2545_F491_4F6C_DD1D;
+    (0..n)
+        .map(|_| {
+            state = state
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            ((state >> 11) + 1) as f64 / (1u64 << 53) as f64
+        })
+        .collect()
 }

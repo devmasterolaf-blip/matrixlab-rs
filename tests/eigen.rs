@@ -164,3 +164,120 @@ fn invalid_inputs_are_rejected() {
         LinalgError::InvalidArgument { .. }
     ));
 }
+
+mod power {
+    use super::common::{assert_close, assert_vector_close};
+    use matrixlab::eigen::{power_iteration, symmetric_eigen, PowerOptions};
+    use matrixlab::{LinalgError, Matrix, Vector};
+
+    #[test]
+    fn finds_the_dominant_eigenvalue_of_a_symmetric_matrix() {
+        let a = Matrix::from_rows(&[[2.0, 1.0], [1.0, 2.0]]).unwrap();
+        let pair = power_iteration(&a, &PowerOptions::default()).unwrap();
+        assert_close(pair.value, 3.0, 1e-9);
+        let h = std::f64::consts::FRAC_1_SQRT_2;
+        assert_vector_close(&pair.vector, &[h, h], 1e-9);
+        assert!(pair.iterations > 1);
+    }
+
+    #[test]
+    fn finds_a_negative_dominant_eigenvalue() {
+        // Eigenvalues -5 and 1: the vector alternates in sign but the quotient settles.
+        let a = Matrix::from_rows(&[[-2.0, 3.0], [3.0, -2.0]]).unwrap();
+        let pair = power_iteration(&a, &PowerOptions::default()).unwrap();
+        assert_close(pair.value, -5.0, 1e-9);
+    }
+
+    #[test]
+    fn works_for_a_non_symmetric_matrix_with_a_real_dominant_eigenvalue() {
+        // Upper triangular, so the eigenvalues are the diagonal: 5 and 2.
+        let a = Matrix::from_rows(&[[5.0, 1.0], [0.0, 2.0]]).unwrap();
+        let pair = power_iteration(&a, &PowerOptions::default()).unwrap();
+        assert_close(pair.value, 5.0, 1e-8);
+        assert_close(pair.vector[1], 0.0, 1e-8);
+    }
+
+    #[test]
+    fn agrees_with_the_jacobi_solver_on_a_larger_matrix() {
+        let a = Matrix::from_fn(6, 6, |i, j| 1.0 / (i + j + 1) as f64);
+        let largest = *symmetric_eigen(&a).unwrap().values.last().unwrap();
+        let pair = power_iteration(&a, &PowerOptions::default()).unwrap();
+        assert_close(pair.value, largest, 1e-9);
+    }
+
+    #[test]
+    fn an_exact_eigenvector_as_start_converges_at_once() {
+        let a = Matrix::from_diagonal(&[1.0, 4.0]);
+        let options = PowerOptions {
+            start: Some(Vector::from_slice(&[0.0, 2.0])),
+            ..PowerOptions::default()
+        };
+        let pair = power_iteration(&a, &options).unwrap();
+        assert_eq!(pair.iterations, 1);
+        assert_eq!(pair.value, 4.0);
+        assert_eq!(pair.vector.as_slice(), &[0.0, 1.0]);
+    }
+
+    #[test]
+    fn eigenvalues_of_equal_magnitude_do_not_converge() {
+        let a = Matrix::from_diagonal(&[2.0, -2.0]);
+        let options = PowerOptions {
+            max_iterations: 200,
+            ..PowerOptions::default()
+        };
+        match power_iteration(&a, &options).unwrap_err() {
+            LinalgError::NoConvergence {
+                method,
+                iterations,
+                residual,
+            } => {
+                assert_eq!(method, "power iteration");
+                assert_eq!(iterations, 200);
+                assert!(residual > 0.1);
+            }
+            other => panic!("unexpected error: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn a_close_second_eigenvalue_needs_more_iterations_than_allowed() {
+        let a = Matrix::from_diagonal(&[1.0, 0.999]);
+        let options = PowerOptions {
+            max_iterations: 20,
+            ..PowerOptions::default()
+        };
+        assert!(matches!(
+            power_iteration(&a, &options),
+            Err(LinalgError::NoConvergence { iterations: 20, .. })
+        ));
+    }
+
+    #[test]
+    fn invalid_inputs_are_rejected() {
+        let a = Matrix::identity(2);
+        let wrong_length = PowerOptions {
+            start: Some(Vector::zeros(3)),
+            ..PowerOptions::default()
+        };
+        assert!(matches!(
+            power_iteration(&a, &wrong_length),
+            Err(LinalgError::DimensionMismatch { .. })
+        ));
+        let zero_start = PowerOptions {
+            start: Some(Vector::zeros(2)),
+            ..PowerOptions::default()
+        };
+        assert!(matches!(
+            power_iteration(&a, &zero_start),
+            Err(LinalgError::InvalidArgument { .. })
+        ));
+        assert!(matches!(
+            power_iteration(&Matrix::zeros(2, 3), &PowerOptions::default()),
+            Err(LinalgError::NotSquare { .. })
+        ));
+        assert!(matches!(
+            power_iteration(&Matrix::zeros(0, 0), &PowerOptions::default()),
+            Err(LinalgError::Empty { .. })
+        ));
+    }
+}
