@@ -3,6 +3,7 @@
 use std::ops::{Index, IndexMut};
 
 use crate::error::{LinalgError, Result};
+use crate::sum;
 
 /// A dense matrix of `f64` values stored row by row in one contiguous buffer.
 ///
@@ -207,10 +208,11 @@ impl Matrix {
             .collect()
     }
 
-    /// The sum of the diagonal elements of a square matrix.
+    /// The sum of the diagonal elements of a square matrix, accumulated with compensated
+    /// summation. The trace of a 0 x 0 matrix is zero.
     pub fn trace(&self) -> Result<f64> {
         self.require_square()?;
-        Ok(self.diagonal().iter().sum())
+        Ok(sum::sum(self.diagonal()))
     }
 
     /// The transpose, as a new matrix.

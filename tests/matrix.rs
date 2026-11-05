@@ -211,3 +211,17 @@ fn from_vec_rejects_a_shape_whose_element_count_overflows() {
     );
     assert!(Matrix::from_vec(usize::MAX, usize::MAX, vec![1.0]).is_err());
 }
+
+#[test]
+fn trace_of_an_empty_matrix_is_positive_zero() {
+    let trace = Matrix::zeros(0, 0).trace().unwrap();
+    assert_eq!(trace, 0.0);
+    assert!(trace.is_sign_positive());
+}
+
+#[test]
+fn trace_survives_cancellation_between_large_diagonal_elements() {
+    // A plain running sum loses the 1 next to 1e16.
+    let m = Matrix::from_diagonal(&[1e16, 1.0, -1e16]);
+    assert_eq!(m.trace(), Ok(1.0));
+}
