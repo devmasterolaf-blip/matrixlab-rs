@@ -5,9 +5,11 @@
 pub mod error;
 pub mod matrix;
 pub mod sum;
+pub mod vector;
 
 pub use error::{LinalgError, Result};
 pub use matrix::Matrix;
+pub use vector::Vector;
 
 /// The version of the crate, as written in `Cargo.toml`.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
